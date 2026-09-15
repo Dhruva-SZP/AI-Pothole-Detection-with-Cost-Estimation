@@ -1,0 +1,44 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.exe
+
+# Python Bytecode & Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Environment Variables
+.env
+!.env.example
+
+# Logs
+*.log
+backend/logs/*
+!backend/logs/.gitkeep
+
+# Uploaded Media & Runtime Caches
+backend/uploads/raw/*
+!backend/uploads/raw/.gitkeep
+backend/uploads/annotated/*
+!backend/uploads/annotated/.gitkeep
+
+# YOLO Training Datasets & Artifacts
+backend/dataset/potholes/
+backend/runs/
+*.bak
+yolov8n.pt
+
+# Node.js / React Frontend
+frontend/node_modules/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

@@ -1,0 +1,19 @@
+# Core Web & API Framework
+Flask==3.0.2
+Werkzeug==3.0.1
+python-dotenv==1.0.1
+Flask-Cors==4.0.0
+
+# Database
+pyodbc==5.3.0
+
+# Computer Vision & Machine Learning
+ultralytics==8.1.24
+opencv-python-headless==4.9.0.80
+numpy>=1.23.0,<2.0.0
+Pillow>=10.2.0
+
+# Utilities & WSGI Production Server
+pydantic==2.6.4
+waitress==3.0.2
+
