@@ -249,8 +249,8 @@ def create_connection(database: str = None, autocommit: bool = False):
                 "user": creds["user"],
                 "password": creds["password"],
                 "autocommit": autocommit,
-                "timeout": 15,
-                "login_timeout": 15
+                "timeout": int(os.getenv("DB_TIMEOUT", "6")),
+                "login_timeout": int(os.getenv("DB_LOGIN_TIMEOUT", "6"))
             }
             if creds["port"]:
                 connect_kwargs["port"] = creds["port"]
