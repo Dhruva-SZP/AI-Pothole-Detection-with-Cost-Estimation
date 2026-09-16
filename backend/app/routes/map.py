@@ -43,10 +43,14 @@ def get_markers():
 
     sql += " ORDER BY [created_at] DESC"
 
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(sql, params)
-        rows = rows_to_dict_list(cursor, cursor.fetchall())
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, params)
+            rows = rows_to_dict_list(cursor, cursor.fetchall())
+    except Exception as exc:
+        current_app.logger.warning("Error querying map markers from DB (%s). Returning empty list.", exc)
+        rows = []
 
     # Map to frontend-friendly marker objects
     markers = [
@@ -75,10 +79,14 @@ def get_geojson():
     """
     Returns GeoJSON FeatureCollection formatted to RFC 7946 for GIS integration.
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(GET_MAP_MARKERS)
-        rows = rows_to_dict_list(cursor, cursor.fetchall())
+    rows = []
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(GET_MAP_MARKERS)
+            rows = rows_to_dict_list(cursor, cursor.fetchall())
+    except Exception as exc:
+        current_app.logger.warning("Error fetching GeoJSON markers from DB (%s). Returning empty list.", exc)
 
     features = []
     for r in rows:

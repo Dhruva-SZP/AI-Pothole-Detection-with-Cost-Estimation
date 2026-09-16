@@ -23,7 +23,7 @@ class Config:
     # Server settings
     FLASK_ENV = os.getenv("FLASK_ENV", "development")
     DEBUG = os.getenv("FLASK_DEBUG", "1") == "1"
-    PORT = int(os.getenv("PORT", 5000))
+    PORT = int(os.getenv("PORT", 10000 if ("RENDER" in os.environ or sys.platform != "win32") else 5000))
     
     # Database settings
     DB_DRIVER = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
