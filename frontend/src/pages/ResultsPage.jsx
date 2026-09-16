@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -21,14 +21,17 @@ import { getMediaUrl } from '../api/client';
 
 export default function ResultsPage() {
   const { id } = useParams();
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const [report, setReport] = useState(location.state?.report || null);
+  const [loading, setLoading] = useState(!location.state?.report);
   const [error, setError] = useState(null);
   const [activeImageTab, setActiveImageTab] = useState('annotated'); // 'annotated' or 'original'
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
-    fetchReportDetails();
+    if (!location.state?.report) {
+      fetchReportDetails();
+    }
   }, [id]);
 
   const fetchReportDetails = async () => {
@@ -120,7 +123,7 @@ export default function ResultsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-              <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Inspection #{report.id}</h1>
+              <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Inspection #{report.id || report.report_id || 1}</h1>
               <span className={`badge severity-${(report.severity_level || 'low').toLowerCase()}`}>
                 {report.severity_level || 'Low'} Severity
               </span>

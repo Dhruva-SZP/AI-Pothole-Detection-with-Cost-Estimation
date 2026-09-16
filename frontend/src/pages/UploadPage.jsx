@@ -98,12 +98,9 @@ export default function UploadPage() {
         setUploadProgress(percent);
       });
 
-      const reportId = response.data?.report_id;
-      if (reportId) {
-        navigate(`/reports/${reportId}`);
-      } else {
-        navigate('/reports');
-      }
+      const reportData = response.data || {};
+      const reportId = reportData.report_id || reportData.id || 1;
+      navigate(`/reports/${reportId}`, { state: { report: reportData } });
     } catch (err) {
       setApiError(err.message || 'Inspection processing failed.');
       setIsProcessing(false);
