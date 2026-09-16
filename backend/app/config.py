@@ -4,6 +4,7 @@ Loads environment variables and provides structured configuration classes.
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 

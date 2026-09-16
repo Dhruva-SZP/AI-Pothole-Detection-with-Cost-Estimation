@@ -36,23 +36,23 @@ def get_stats():
     stats = {
         "kpis": {
             "total_reports": total_rep,
-            "total_potholes_detected": raw_stats["total_potholes_detected"] or 0,
-            "total_repair_cost": float(raw_stats["total_repair_cost"] or 0.0),
-            "pending_reports": raw_stats["pending_reports"] or 0,
+            "total_potholes_detected": raw_stats.get("total_potholes_detected", 0) or 0,
+            "total_repair_cost": float(raw_stats.get("total_repair_cost", 0.0) or 0.0),
+            "pending_reports": raw_stats.get("pending_reports", 0) or 0,
             "repaired_reports": repaired_rep,
             "resolution_rate_percent": resolution_rate
         },
         "status_distribution": {
-            "Reported": raw_stats["pending_reports"] or 0,
-            "Verified": raw_stats["verified_reports"] or 0,
-            "In_Progress": raw_stats["in_progress_reports"] or 0,
+            "Reported": raw_stats.get("pending_reports", 0) or 0,
+            "Verified": raw_stats.get("verified_reports", 0) or 0,
+            "In_Progress": raw_stats.get("in_progress_reports", 0) or 0,
             "Repaired": repaired_rep
         },
         "severity_distribution": {
-            "Critical": raw_stats["critical_severity_count"] or 0,
-            "High": raw_stats["high_severity_count"] or 0,
-            "Medium": raw_stats["medium_severity_count"] or 0,
-            "Low": raw_stats["low_severity_count"] or 0
+            "Critical": raw_stats.get("critical_severity_count", 0) or 0,
+            "High": raw_stats.get("high_severity_count", 0) or 0,
+            "Medium": raw_stats.get("medium_severity_count", 0) or 0,
+            "Low": raw_stats.get("low_severity_count", 0) or 0
         }
     }
 
