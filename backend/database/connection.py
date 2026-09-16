@@ -239,18 +239,34 @@ def create_connection(database: str = None, autocommit: bool = False):
     creds = get_db_credentials(database=database)
     use_pymssql = should_use_pymssql(creds)
 
+    is_render = "RENDER" in os.environ or sys.platform != "win32"
+    server_is_local = creds["server"].lower().startswith("localhost") or creds["server"] == "127.0.0.1"
+
+    # On cloud / Render: if DB_SERVER has not been pointed to an external host/tunnel,
+    # avoid hanging on UDP 1434 broadcast lookup to non-existent localhost SQLEXPRESS.
+    if is_render and server_is_local and not os.getenv("DB_SERVER"):
+        raise ConnectionError(
+            "SQL Server is not running on Render container localhost. "
+            "Configure DB_SERVER and DB_PORT with your ngrok tunnel in Render Environment."
+        )
+
     if use_pymssql:
         if not PYMSSQL_AVAILABLE:
             raise RuntimeError("pymssql is required but not installed in the current environment.")
         try:
+            # Clean server name for FreeTDS / pymssql (strip instance name if port/tunnel is used)
+            connect_server = creds["server"]
+            if "\\" in connect_server and (creds["port"] or is_render):
+                connect_server = connect_server.split("\\", 1)[0]
+
             connect_kwargs = {
-                "server": creds["server"],
+                "server": connect_server,
                 "database": creds["database"],
                 "user": creds["user"],
                 "password": creds["password"],
                 "autocommit": autocommit,
-                "timeout": int(os.getenv("DB_TIMEOUT", "6")),
-                "login_timeout": int(os.getenv("DB_LOGIN_TIMEOUT", "6"))
+                "timeout": int(os.getenv("DB_TIMEOUT", "4")),
+                "login_timeout": int(os.getenv("DB_LOGIN_TIMEOUT", "4"))
             }
             if creds["port"]:
                 connect_kwargs["port"] = creds["port"]
@@ -344,6 +360,19 @@ def test_connection(database: str = None) -> dict:
     creds = get_db_credentials(database=database)
     target_db = creds["database"]
     driver_name = "pymssql (FreeTDS)" if should_use_pymssql(creds) else "pyodbc"
+
+    is_render = "RENDER" in os.environ or sys.platform != "win32"
+    server_is_local = creds["server"].lower().startswith("localhost") or creds["server"] == "127.0.0.1"
+
+    if is_render and server_is_local and not os.getenv("DB_SERVER"):
+        return {
+            "success": False,
+            "version": None,
+            "server": creds["server"],
+            "database": target_db,
+            "driver": driver_name,
+            "error": "SQL Server is offline (waiting for ngrok tunnel). Configure DB_SERVER and DB_PORT in Render."
+        }
 
     try:
         with get_db_connection(database=target_db) as conn:
