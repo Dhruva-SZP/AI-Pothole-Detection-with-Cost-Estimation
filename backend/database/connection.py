@@ -40,12 +40,28 @@ def get_db_credentials(database: str = None) -> dict:
     Parses and sanitizes database connection parameters from environment variables.
     Handles host:port parsing in DB_SERVER automatically.
     """
-    raw_server = os.getenv("DB_SERVER", r"localhost\SQLEXPRESS").strip()
+    is_render = "RENDER" in os.environ or sys.platform != "win32"
+
+    raw_server = os.getenv("DB_SERVER", "").strip()
     raw_port = os.getenv("DB_PORT", "").strip()
     db = (database or os.getenv("DB_NAME", "PotholeDetectionDB")).strip()
     user = os.getenv("DB_USER", "").strip()
     password = os.getenv("DB_PASSWORD", "").strip()
     driver = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server").strip()
+
+    # On cloud / Render, 'localhost' is unreachable because the SQL Server runs on the user's local PC.
+    # Default to the active public tunnel endpoint if not explicitly overridden by user:
+    if is_render and (not raw_server or raw_server.lower().startswith("localhost") or raw_server == "127.0.0.1"):
+        raw_server = "bore.pub"
+        if not raw_port:
+            raw_port = "41982"
+        if not user:
+            user = "pothole_app"
+        if not password:
+            password = "PotholeSecure2026!"
+
+    if not raw_server:
+        raw_server = r"localhost\SQLEXPRESS"
 
     # Determine default trusted connection
     trusted_env = os.getenv("DB_TRUSTED_CONNECTION", "")
@@ -53,7 +69,7 @@ def get_db_credentials(database: str = None) -> dict:
         trusted_connection = trusted_env.lower() in ("yes", "true", "1")
     else:
         # Default to trusted only on Windows if no user/password is specified and not on Render
-        trusted_connection = sys.platform == "win32" and not user and "RENDER" not in os.environ
+        trusted_connection = sys.platform == "win32" and not user and not is_render
 
     # Parse host and port if passed together e.g. "0.tcp.ngrok.io:19456"
     server_host = raw_server

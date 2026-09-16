@@ -12,10 +12,60 @@ import {
   RefreshCw,
   ExternalLink,
   ChevronRight,
-  Eye
+  Eye,
+  Navigation,
+  Crosshair,
+  Loader2
 } from 'lucide-react';
 import potholeService from '../api/potholeService';
 import { getMediaUrl } from '../api/client';
+import useGeolocation from '../hooks/useGeolocation';
+
+// User current location pulsating blue pin
+function createUserLocationIcon() {
+  const html = `
+    <div style="
+      position: relative;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+      <div style="
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: #38bdf8;
+        opacity: 0.35;
+        animation: pulse 1.5s infinite ease-out;
+      "></div>
+      <div style="
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #0284c7;
+        border: 2.5px solid #ffffff;
+        box-shadow: 0 0 12px rgba(2, 132, 199, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+      ">
+        📍
+      </div>
+    </div>
+  `;
+
+  return L.divIcon({
+    html: html,
+    className: 'custom-user-location-marker',
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18],
+  });
+}
 
 // Fix for custom DivIcon markers styled by severity
 function createSeverityIcon(severity, status) {
@@ -100,6 +150,26 @@ export default function MapPage() {
   const [activeMarker, setActiveMarker] = useState(null);
   const [mapCenter, setMapCenter] = useState([12.9716, 77.5946]); // Default: Bangalore
   const [mapZoom, setMapZoom] = useState(13);
+
+  // User Geolocation Detection
+  const { coords: userCoords, loading: locatingUser, error: geoError, getPosition: locateUser } = useGeolocation();
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationNotice, setLocationNotice] = useState(null);
+
+  const handleLocateMe = () => {
+    setLocationNotice('Detecting your location...');
+    locateUser((pos) => {
+      const lat = parseFloat(pos.latitude);
+      const lng = parseFloat(pos.longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setUserLocation([lat, lng]);
+        setMapCenter([lat, lng]);
+        setMapZoom(15);
+        setLocationNotice(`Location set: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        setTimeout(() => setLocationNotice(null), 4000);
+      }
+    });
+  };
 
   useEffect(() => {
     loadMarkers();
@@ -187,11 +257,27 @@ export default function MapPage() {
           </div>
         </div>
 
-        {/* Counter & Reload */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {/* Counter & Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {locationNotice && (
+            <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 600 }}>
+              {locationNotice}
+            </span>
+          )}
           <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
             Showing <span style={{ color: '#fff', fontWeight: 800 }}>{filteredMarkers.length}</span> of {markers.length} potholes
           </span>
+          <button
+            type="button"
+            onClick={handleLocateMe}
+            disabled={locatingUser}
+            className="btn btn-primary"
+            style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            title="Detect my current location"
+          >
+            {locatingUser ? <Loader2 size={14} className="spin" /> : <Navigation size={14} />}
+            <span>Locate Me</span>
+          </button>
           <button
             type="button"
             onClick={loadMarkers}
@@ -209,6 +295,30 @@ export default function MapPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1rem', flex: 1, minHeight: 0 }}>
         {/* Leaflet Map Surface */}
         <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', height: '100%' }}>
+          {/* Floating My Location Button on Map */}
+          <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 1000 }}>
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              disabled={locatingUser}
+              className="btn btn-primary"
+              style={{
+                boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+                padding: '0.5rem 0.85rem',
+                fontSize: '0.82rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: 'var(--accent-orange)'
+              }}
+              title="Detect current location"
+            >
+              {locatingUser ? <Loader2 size={15} className="spin" /> : <Crosshair size={15} />}
+              <span>{locatingUser ? 'Locating...' : 'My Location'}</span>
+            </button>
+          </div>
+
           <MapContainer
             center={mapCenter}
             zoom={mapZoom}
@@ -223,6 +333,25 @@ export default function MapPage() {
               url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
               maxZoom={19}
             />
+
+            {/* User Current Location Marker */}
+            {userLocation && (
+              <Marker
+                position={userLocation}
+                icon={createUserLocationIcon()}
+              >
+                <Popup className="custom-leaflet-popup">
+                  <div style={{ padding: '0.4rem', textAlign: 'center' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#38bdf8', marginBottom: '0.2rem' }}>
+                      📍 Your Current Location
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                      {userLocation[0].toFixed(5)}, {userLocation[1].toFixed(5)}
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
 
             {/* Pothole Markers */}
             {filteredMarkers.map((marker) => (

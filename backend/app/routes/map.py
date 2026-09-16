@@ -3,10 +3,11 @@ Geospatial & Leaflet Map REST API Blueprint.
 Provides optimized marker feeds and GeoJSON layers for frontend map visualization.
 """
 
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
 from app.errors import api_response
 from database.connection import get_db_connection, rows_to_dict_list
 from database.queries import GET_MAP_MARKERS
+from app.routes.reports import DEMO_REPORTS
 
 map_bp = Blueprint("map", __name__, url_prefix="/api/v1/map")
 
@@ -43,14 +44,36 @@ def get_markers():
 
     sql += " ORDER BY [created_at] DESC"
 
+    rows = []
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql, params)
             rows = rows_to_dict_list(cursor, cursor.fetchall())
     except Exception as exc:
-        current_app.logger.warning("Error querying map markers from DB (%s). Returning empty list.", exc)
+        current_app.logger.warning("Error querying map markers from DB (%s). Checking demo reports.", exc)
         rows = []
+
+    # If DB returned no rows, fall back to in-memory DEMO_REPORTS
+    if not rows and DEMO_REPORTS:
+        for r_id, r_data in DEMO_REPORTS.items():
+            if isinstance(r_data, dict) and r_data.get("latitude") and r_data.get("longitude"):
+                # Avoid duplicates
+                if not any(x.get("report_uid") == r_data.get("report_uid") for x in rows):
+                    rows.append({
+                        "id": r_data.get("id") or r_data.get("report_id") or 1,
+                        "report_uid": r_data.get("report_uid", "rep_demo"),
+                        "latitude": r_data.get("latitude"),
+                        "longitude": r_data.get("longitude"),
+                        "address": r_data.get("address") or "Inspection Location",
+                        "status": r_data.get("status", "Reported"),
+                        "severity_level": r_data.get("severity_level", "High"),
+                        "total_potholes": r_data.get("total_potholes", 1),
+                        "total_estimated_cost": r_data.get("total_estimated_cost", 50.0),
+                        "original_image_path": r_data.get("original_image_url") or r_data.get("original_image_path"),
+                        "annotated_image_path": r_data.get("annotated_image_url") or r_data.get("annotated_image_path"),
+                        "created_at": "Just now"
+                    })
 
     # Map to frontend-friendly marker objects
     markers = [
