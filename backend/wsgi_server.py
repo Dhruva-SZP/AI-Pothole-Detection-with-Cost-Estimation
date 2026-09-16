@@ -42,14 +42,23 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     threads = int(os.getenv("WSGI_THREADS", 8))
 
+    from database.connection import test_connection, get_safe_db_summary
+    db_summary = get_safe_db_summary()
+    db_check = test_connection()
+
     print("\n" + "=" * 75)
     print("  AI Pothole Detection & Cost Prediction - Production WSGI Server")
     print("=" * 75)
-    print(f"  Engine       : Waitress WSGI (Multi-Threaded Windows Server)")
+    print(f"  Engine       : Waitress WSGI (Multi-Threaded Server)")
     print(f"  Listening on : http://0.0.0.0:{port} (Local: http://127.0.0.1:{port})")
     print(f"  Worker Pool  : {threads} threads")
     print(f"  API Health   : http://127.0.0.1:{port}/api/v1/health")
-    print(f"  SQL Server   : http://127.0.0.1:{port}/api/v1/health/db")
+    print(f"  DB Endpoint  : http://127.0.0.1:{port}/api/v1/health/db")
+    print(f"  DB Target    : {db_summary}")
+    if db_check["success"]:
+        print(f"  DB Status    : [CONNECTED] {db_check['database']} on {db_check['server']} ({db_check['driver']})")
+    else:
+        print(f"  DB Status    : [DISCONNECTED] {db_check['error']}")
     print(f"  Static Build : {'Mounted (Single-port UI)' if FRONTEND_DIST.exists() else 'API-only mode'}")
     print("=" * 75 + "\n")
 

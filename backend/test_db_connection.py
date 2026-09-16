@@ -28,12 +28,13 @@ def run_tests():
     print("=" * 70)
 
     # 1. Connectivity Test
-    print("\n[1/4] Testing SQL Server Connection via pyodbc...")
+    print("\n[1/4] Testing SQL Server Connection...")
     info = test_connection()
     if not info["success"]:
         print(f"[ERROR] Connection Failed: {info['error']}")
         sys.exit(1)
     print("  Status   : Connected")
+    print(f"  Driver   : {info.get('driver', 'Unknown')}")
     print(f"  Server   : {info['server']}")
     print(f"  Version  : {info['version']}")
     print(f"  Database : {info['database']}")
@@ -122,7 +123,7 @@ def run_tests():
             print(f"    - {k}: {v}")
 
     print("\n" + "=" * 70)
-    print("[SUCCESS] ALL SQL SERVER & pyodbc DATABASE TESTS PASSED SUCCESSFULLY!")
+    print("[SUCCESS] ALL SQL SERVER DATABASE TESTS PASSED SUCCESSFULLY!")
     print("=" * 70)
 
 

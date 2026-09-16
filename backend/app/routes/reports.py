@@ -79,7 +79,7 @@ def create_report():
 
     # Fetch active cost parameters from SQL Server for custom rate application if available
     cost_params = None
-    if os.getenv("DEMO_MODE", "").lower() != "true" and "RENDER" not in os.environ:
+    if os.getenv("DEMO_MODE", "").lower() != "true":
         try:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
@@ -110,14 +110,63 @@ def create_report():
     raw_rel_url = f"/uploads/raw/{raw_filename}"
     annotated_rel_url = f"/uploads/annotated/{annotated_filename}"
 
-    # Database persistence is disabled for the Render demo deployment.
-    # AI detection and cost estimation continue without SQL Server.
     report_id = None
-    status = "Analyzed"
+    status = "Reported"
 
-    current_app.logger.info(
-        "Demo mode: skipping SQL Server persistence. AI analysis completed successfully."
-    )
+    # Atomic SQL Server Transaction
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # 1. Insert parent report
+            cursor.execute(
+                INSERT_REPORT,
+                (
+                    report_uid,
+                    None,  # user_id
+                    raw_rel_url,
+                    annotated_rel_url,
+                    latitude,
+                    longitude,
+                    address,
+                    status,
+                    inference_result["total_potholes"],
+                    inference_result["total_estimated_cost"],
+                    inference_result["severity_level"],
+                    notes
+                )
+            )
+            inserted_row = cursor.fetchone()
+            if inserted_row:
+                report_id = inserted_row[0]
+
+            # 2. Insert child detections
+            for det in inference_result["detections"]:
+                b = det["bbox"]
+                cursor.execute(
+                    INSERT_DETECTION,
+                    (
+                        report_id,
+                        float(b[0]), float(b[1]), float(b[2]), float(b[3]),
+                        float(det["confidence"]),
+                        float(det["estimated_width_cm"]),
+                        float(det["estimated_length_cm"]),
+                        float(det["estimated_depth_cm"]),
+                        float(det["estimated_area_sq_cm"]),
+                        float(det["estimated_volume_cu_cm"]),
+                        float(det["estimated_cost"]),
+                        det["severity"]
+                    )
+                )
+        current_app.logger.info("Successfully persisted Report #%s (UID: %s) to SQL Server.", report_id, report_uid)
+    except Exception as db_exc:
+        current_app.logger.error("Database persistence failed: %s", db_exc)
+        if os.getenv("DEMO_MODE", "").lower() == "true":
+            report_id = report_id or 1
+            status = "Analyzed"
+            current_app.logger.warning("DEMO_MODE active: cached response without DB persistence.")
+        else:
+            raise APIError(f"Failed to persist report to SQL Server: {str(db_exc)}", status_code=500)
 
     # Construct response payload
     response_data = {
@@ -153,7 +202,7 @@ def list_reports():
     """
     Returns list of all pothole reports with optional filtering by status and severity.
     """
-    if os.getenv("DEMO_MODE", "").lower() == "true" or "RENDER" in os.environ:
+    if os.getenv("DEMO_MODE", "").lower() == "true":
         reports = list(DEMO_REPORTS.values())
         return api_response(data=reports, message=f"Retrieved {len(reports)} reports (Demo Mode).")
 
@@ -184,8 +233,11 @@ def list_reports():
 
         return api_response(data=reports, message=f"Retrieved {len(reports)} reports.")
     except Exception as exc:
-        reports = list(DEMO_REPORTS.values())
-        return api_response(data=reports, message=f"Retrieved {len(reports)} reports (Demo Mode).")
+        current_app.logger.error("Error retrieving reports from database: %s", exc)
+        if os.getenv("DEMO_MODE", "").lower() == "true":
+            reports = list(DEMO_REPORTS.values())
+            return api_response(data=reports, message=f"Retrieved {len(reports)} reports (Demo Mode fallback).")
+        raise APIError(f"Database query failed: {str(exc)}", status_code=500)
 
 
 @reports_bp.route("/<report_id>", methods=["GET"])
@@ -193,20 +245,15 @@ def get_report(report_id):
     """
     Returns single report detail including all detected pothole measurements.
     """
-    str_id = str(report_id)
-    if str_id in DEMO_REPORTS:
-        return api_response(data=DEMO_REPORTS[str_id], message="Report retrieved successfully.")
-    if 1 in DEMO_REPORTS:
-        return api_response(data=DEMO_REPORTS[1], message="Report retrieved successfully.")
-
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(GET_REPORT_BY_ID, (report_id,))
             report_row = cursor.fetchone()
             if not report_row:
-                if DEMO_REPORTS:
-                    return api_response(data=list(DEMO_REPORTS.values())[0], message="Report retrieved from demo cache.")
+                str_id = str(report_id)
+                if str_id in DEMO_REPORTS:
+                    return api_response(data=DEMO_REPORTS[str_id], message="Report retrieved from demo cache.")
                 raise APIError(f"Report #{report_id} not found.", status_code=404)
             report = row_to_dict(cursor, report_row)
 
@@ -216,10 +263,14 @@ def get_report(report_id):
             report["detections"] = detections
 
         return api_response(data=report, message="Report retrieved successfully.")
+    except APIError:
+        raise
     except Exception as exc:
-        if DEMO_REPORTS:
-            return api_response(data=list(DEMO_REPORTS.values())[0], message="Report retrieved from demo cache.")
-        raise APIError(f"Report #{report_id} not found: {str(exc)}", status_code=404)
+        current_app.logger.error("Error retrieving report #%s: %s", report_id, exc)
+        str_id = str(report_id)
+        if str_id in DEMO_REPORTS:
+            return api_response(data=DEMO_REPORTS[str_id], message="Report retrieved from demo cache.")
+        raise APIError(f"Failed to retrieve report #{report_id}: {str(exc)}", status_code=500)
 
 
 @reports_bp.route("/<int:report_id>/status", methods=["PATCH"])

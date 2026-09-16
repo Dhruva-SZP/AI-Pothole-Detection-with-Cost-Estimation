@@ -47,6 +47,7 @@ def database_health():
                 "server": result["server"],
                 "database": result["database"],
                 "version": result["version"],
+                "driver": result.get("driver", "unknown"),
                 "latency_ms": latency_ms
             },
             message="SQL Server connection is healthy and responsive."
@@ -57,6 +58,9 @@ def database_health():
             status_code=503,
             details={
                 "error": result["error"],
+                "server": result.get("server"),
+                "database": result.get("database"),
+                "driver": result.get("driver", "unknown"),
                 "latency_ms": latency_ms
             }
         )

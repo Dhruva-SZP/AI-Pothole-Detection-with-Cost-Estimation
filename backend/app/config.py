@@ -28,6 +28,7 @@ class Config:
     # Database settings
     DB_DRIVER = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
     DB_SERVER = os.getenv("DB_SERVER", r"localhost\SQLEXPRESS")
+    DB_PORT = os.getenv("DB_PORT", "")
     DB_NAME = os.getenv("DB_NAME", "PotholeDetectionDB")
     DB_TRUSTED_CONNECTION = os.getenv("DB_TRUSTED_CONNECTION", "yes").lower() == "yes"
     DB_USER = os.getenv("DB_USER", "")
