@@ -12,8 +12,15 @@ ultralytics==8.1.24
 opencv-python-headless==4.9.0.80
 numpy>=1.23.0,<2.0.0
 Pillow>=10.2.0
+pydantic==2.6.4
+torch==2.5.1
+torchvision==0.20.1
+tqdm>=4.64.0
+psutil
+py-cpuinfo
+thop>=0.1.1
 
 # Utilities & WSGI Production Server
-pydantic==2.6.4
 waitress==3.0.2
+
 
