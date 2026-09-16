@@ -31,50 +31,13 @@ echo.
 echo [2/3] Verifying TCP Port 1433 is listening...
 powershell -Command "$m = netstat -ano | findstr :1433; if ($m) { Write-Host '[OK] Port 1433 is active and LISTENING!' -ForegroundColor Green } else { Write-Host '[!] Port 1433 is not listening yet. Check SQL Server Configuration Manager.' -ForegroundColor Yellow }"
 
-echo.
-echo [3/3] Preparing ngrok TCP tunnel...
-set NGROK_BIN="%LOCALAPPDATA%\Microsoft\WinGet\Packages\Ngrok.Ngrok_Microsoft.Winget.Source_8wekyb3d8bbwe\ngrok.exe"
-
-if not exist %NGROK_BIN% (
-    echo [!] ngrok.exe was not found at standard winget path.
-    echo     Checking system PATH...
-    set NGROK_BIN=ngrok
-)
-
-:: Check if ngrok config exists
-%NGROK_BIN% config check >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo.
-    echo ======================================================================
-    echo   ACTION REQUIRED: ngrok needs your free authtoken (one-time setup)
-    echo ======================================================================
-    echo   1. Sign in or sign up (free) at: https://dashboard.ngrok.com
-    echo   2. Get your authtoken at: https://dashboard.ngrok.com/get-started/your-authtoken
-    echo   3. Paste your authtoken below and press Enter:
-    echo ======================================================================
-    set /p AUTHTOKEN="Enter ngrok authtoken: "
-    if defined AUTHTOKEN (
-        %NGROK_BIN% config add-authtoken !AUTHTOKEN!
-        echo.
-        echo [OK] Token saved successfully!
-    )
-)
-
-echo.
+echo [3/3] Launching Public Tunnel (bore)...
 echo ======================================================================
-echo   STARTING NGROK TUNNEL (Port 1433)...
-echo   When the tunnel starts, look for the 'Forwarding' line:
-echo      Example:  Forwarding  tcp://0.tcp.ngrok.io:19456 -^> localhost:1433
-echo.
-echo   Then in your Render Dashboard -^> Environment, set:
-echo      DB_SERVER = 0.tcp.ngrok.io   (or whatever host ngrok shows)
-echo      DB_PORT   = 19456            (or whatever port ngrok shows)
-echo      DB_NAME   = PotholeDetectionDB
-echo      DB_USER   = pothole_app
-echo      DB_PASSWORD = PotholeSecure2026!
-echo      DB_TRUSTED_CONNECTION = no
+echo   Starting tunnel to bore.pub on Port 1433...
+echo   (Zero setup required - No credit card, no account)
 echo ======================================================================
 echo.
-%NGROK_BIN% tcp 1433
+
+"%~dp0bore.exe" local 1433 --to bore.pub
 
 pause
