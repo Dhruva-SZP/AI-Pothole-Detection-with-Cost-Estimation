@@ -15,6 +15,7 @@ import {
   Eye
 } from 'lucide-react';
 import potholeService from '../api/potholeService';
+import { getMediaUrl } from '../api/client';
 
 // Fix for custom DivIcon markers styled by severity
 function createSeverityIcon(severity, status) {
@@ -239,7 +240,7 @@ export default function MapPage() {
                     {marker.annotated_image_url && (
                       <div style={{ borderRadius: '6px', overflow: 'hidden', marginBottom: '0.75rem', background: '#090d16', textAlign: 'center' }}>
                         <img
-                          src={marker.annotated_image_url}
+                          src={getMediaUrl(marker.annotated_image_url)}
                           alt="Pothole detection overlay"
                           style={{ width: '100%', maxHeight: 150, objectFit: 'cover' }}
                         />

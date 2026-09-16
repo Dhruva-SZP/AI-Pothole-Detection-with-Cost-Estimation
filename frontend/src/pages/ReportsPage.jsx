@@ -15,6 +15,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import potholeService from '../api/potholeService';
+import { getMediaUrl } from '../api/client';
 
 export default function ReportsPage() {
   const [reports, setReports] = useState([]);
@@ -265,7 +266,7 @@ export default function ReportsPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                         {report.annotated_image_path ? (
                           <img
-                            src={report.annotated_image_path}
+                            src={getMediaUrl(report.annotated_image_path)}
                             alt="Thumbnail"
                             style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border-color)' }}
                           />

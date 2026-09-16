@@ -17,6 +17,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import potholeService from '../api/potholeService';
+import { getMediaUrl } from '../api/client';
 
 export default function ResultsPage() {
   const { id } = useParams();
@@ -80,8 +81,8 @@ export default function ResultsPage() {
   }
 
   const detections = report.detections || [];
-  const rawUrl = report.original_image_path;
-  const annUrl = report.annotated_image_path;
+  const rawUrl = getMediaUrl(report.original_image_path);
+  const annUrl = getMediaUrl(report.annotated_image_path);
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto' }}>
