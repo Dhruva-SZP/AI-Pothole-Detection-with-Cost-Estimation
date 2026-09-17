@@ -18,6 +18,7 @@
 
 <p align="center">
   <a href="#-live-production-application"><strong>Explore Live Demo »</strong></a> •
+  <a href="#-demonstration-video"><strong>Watch Video</strong></a> •
   <a href="#-photogrammetric--mathematical-modeling"><strong>Mathematical Modeling</strong></a> •
   <a href="#-system-architecture"><strong>Architecture</strong></a> •
   <a href="#-rest-api-reference"><strong>REST API</strong></a> •
@@ -44,6 +45,20 @@
 
 ---
 
+## 🎬 Demonstration Video
+
+> **Interactive Walkthrough**: Experience autonomous road surface scanning, real-time bounding box localization, depth inference, and live SQL Server synchronization in action.
+
+<p align="center">
+  <a href="https://ai-pothole-detection-with-cost-estimation.onrender.com/">
+    <img src="docs/screenshots/detection_results.png" alt="Watch PotholeAI Live Demo" width="95%" />
+  </a>
+  <br />
+  <em>Click above to launch the live interactive web platform or embed your walkthrough video (.mp4 / GIF) directly.</em>
+</p>
+
+---
+
 ## 🌐 Live Production Application
 
 The system is deployed and fully operational in production on Render cloud infrastructure, connected directly to an enterprise Microsoft SQL Server database:
@@ -61,6 +76,7 @@ The system is deployed and fully operational in production on Render cloud infra
 
 ## 📑 Table of Contents
 - [📸 Visual Showcase](#-visual-showcase)
+- [🎬 Demonstration Video](#-demonstration-video)
 - [🌐 Live Production Application](#-live-production-application)
 - [🌟 Key Innovations & Features](#-key-innovations--features)
 - [🏗️ System Architecture](#-system-architecture)
@@ -111,41 +127,47 @@ The system is deployed and fully operational in production on Render cloud infra
 
 ```mermaid
 flowchart TD
-    subgraph Client ["Client Tier (React 18 + Vite SPA)"]
-        UI_Upload["Upload & Geolocation Page"]
-        UI_Results["Real-Time Cavity Inspection Viewer"]
-        UI_Map["GIS Interactive Leaflet Map"]
-        UI_Feed["Reports Feed & CSV Exporter"]
-        UI_Admin["Municipal KPI & Cost Formula Editor"]
+    subgraph Client["Client Tier: React 18 SPA"]
+        UI["Web Application Interface"]
+        UI_Upload["Upload and Geolocation"]
+        UI_Viewer["Cavity Inspection Viewer"]
+        UI_Map["GIS Leaflet Map"]
+        UI_Feed["Reports Feed and Export"]
+        UI_Admin["Municipal KPI Dashboard"]
+        UI --- UI_Upload
+        UI --- UI_Viewer
+        UI --- UI_Map
+        UI --- UI_Feed
+        UI --- UI_Admin
     end
 
-    subgraph Server ["Application Tier (Flask 3.0 + Waitress WSGI)"]
-        WSGI["Waitress WSGI Multi-Threaded Engine (:10000 / :5000)"]
-        API_Health["Health & Latency Diagnostic Blueprint"]
-        API_Reports["Pothole Inspection & Upload Service"]
-        API_Map["Geospatial Markers & GeoJSON RFC 7946"]
-        API_Admin["Dashboard KPIs & Municipal Rate Config"]
-        Static["Compiled React Distribution Mount (/dist)"]
+    subgraph Server["Application Tier: Flask 3.0 and Waitress WSGI"]
+        WSGI["Waitress WSGI Multi-Threaded Engine"]
+        API_Health["Health and Latency Probes"]
+        API_Reports["Pothole Inspection Service"]
+        API_Map["Geospatial RFC 7946 GeoJSON"]
+        API_Admin["Dashboard KPIs and Cost Config"]
+        Static["Compiled React Distribution Mount"]
     end
 
-    subgraph CV ["Intelligence Tier (YOLOv8 + OpenCV)"]
-        YOLO["YOLOv8 Detection Engine (best.pt)"]
+    subgraph CV["Intelligence Tier: YOLOv8 and OpenCV"]
+        YOLO["YOLOv8 Detection Engine best.pt"]
         GSD["Perspective GSD Scale Calibration"]
         Otsu["Otsu Adaptive Contour Binarization"]
-        Depth["Shape-from-Shading Cavity Depth Inversion"]
+        Depth["Shape-from-Shading Depth Inversion"]
         Volume["Paraboloid Volume Integration"]
         ASTM["ASTM D6433 Distress Classification"]
-        Cost["Municipal Hot-Mix Asphalt Cost Formulation"]
+        Cost["Municipal Hot-Mix Asphalt Formulation"]
     end
 
-    subgraph Database ["Persistence Tier (Microsoft SQL Server 2019)"]
-        SQL_Reports["PotholeReports (Parent Entity)"]
-        SQL_Detections["PotholeDetections (Cascade Child)"]
-        SQL_CostParams["CostParameters (Formula Coefficients)"]
-        Tunnel["TCP Bridge (bore :1433)"]
+    subgraph Database["Persistence Tier: Microsoft SQL Server 2019"]
+        SQL_Reports[("PotholeReports Table")]
+        SQL_Detections[("PotholeDetections Table")]
+        SQL_CostParams[("CostParameters Table")]
+        Tunnel["TCP Bridge: bore Port 1433"]
     end
 
-    Client -->|REST API /api/v1| WSGI
+    UI -->|REST API Requests| WSGI
     WSGI --> API_Health
     WSGI --> API_Reports
     WSGI --> API_Map
@@ -160,10 +182,10 @@ flowchart TD
     Volume --> ASTM
     ASTM --> Cost
 
-    API_Reports -->|pymssql / pyodbc| Tunnel
-    API_Map -->|pymssql / pyodbc| Tunnel
-    API_Admin -->|pymssql / pyodbc| Tunnel
-    API_Health -->|pymssql / pyodbc| Tunnel
+    API_Reports -->|pymssql or pyodbc| Tunnel
+    API_Map -->|pymssql or pyodbc| Tunnel
+    API_Admin -->|pymssql or pyodbc| Tunnel
+    API_Health -->|pymssql or pyodbc| Tunnel
     Tunnel --> SQL_Reports
     Tunnel --> SQL_Detections
     Tunnel --> SQL_CostParams
@@ -176,7 +198,9 @@ flowchart TD
 ### 1. Ground Sampling Distance (GSD)
 Using monocular pinhole optics calibrated for automotive dashcam and inspection mount angles:
 
-$$\text{GSD}_x = \frac{H \cdot S_w}{f \cdot W_{\text{img}}}, \quad \text{GSD}_y = \frac{H \cdot S_h}{f \cdot \sin(\theta) \cdot H_{\text{img}}}$$
+$$
+\text{GSD}_x = \frac{H \cdot S_w}{f \cdot W_{\text{img}}}, \quad \text{GSD}_y = \frac{H \cdot S_h}{f \cdot \sin(\theta) \cdot H_{\text{img}}}
+$$
 
 - $H = 1.3\text{ m}$ (Camera elevation above road grade)
 - $\theta = 50^\circ$ (Optical tilt angle relative to pavement normal)
@@ -185,28 +209,44 @@ $$\text{GSD}_x = \frac{H \cdot S_w}{f \cdot W_{\text{img}}}, \quad \text{GSD}_y 
 ### 2. Cavity Dimensions & Sub-Pixel Surface Area
 Given bounding box pixel dimensions $(w_p, h_p)$ and Otsu contour mask fill factor $\eta$:
 
-$$W_{\text{cm}} = w_p \cdot \text{GSD}_x \cdot 100, \quad L_{\text{cm}} = h_p \cdot \text{GSD}_y \cdot 100$$
+$$
+W_{\text{cm}} = w_p \cdot \text{GSD}_x \cdot 100, \quad L_{\text{cm}} = h_p \cdot \text{GSD}_y \cdot 100
+$$
 
-$$A_{\text{sq\_cm}} = W_{\text{cm}} \cdot L_{\text{cm}} \cdot \eta, \quad \text{where } \eta = \frac{\sum_{(x,y) \in \text{bbox}} \mathcal{M}(x,y)}{w_p \cdot h_p}$$
+$$
+A_{\text{cm}^2} = W_{\text{cm}} \cdot L_{\text{cm}} \cdot \eta, \quad \text{where } \eta = \frac{\sum_{(x,y) \in \text{bbox}} M(x,y)}{w_p \cdot h_p}
+$$
+
+- $M(x,y) \in \{0, 1\}$ represents the binary segmentation mask generated by adaptive Otsu thresholding within the bounding box ROI.
+- $\eta \in [0.45, 0.92]$ filters out non-cavity asphalt road pixels.
 
 ### 3. Shape-from-Shading Cavity Depth
 Physical cavity depth is calculated via localized photometric depression and edge gradients:
 
-$$D_{\text{cm}} = D_{\text{base}} + \Delta D \cdot \left( 1.0 - \frac{\bar{I}_{\text{cavity}}}{\bar{I}_{\text{road}}} \right) + \alpha \cdot \nabla I_{\text{Sobel}}$$
+$$
+D_{\text{cm}} = D_{\text{base}} + \Delta D \cdot \left( 1.0 - \frac{\bar{I}_{\text{cavity}}}{\bar{I}_{\text{road}}} \right) + \alpha \cdot \nabla I_{\text{Sobel}}
+$$
 
 - Calibrated physical bounds: $2.0\text{ cm} \le D_{\text{cm}} \le 18.0\text{ cm}$.
+- $\bar{I}_{\text{cavity}} / \bar{I}_{\text{road}}$ represents photometric luminance attenuation inside the shadow-depressed depression.
+- $\nabla I_{\text{Sobel}}$ captures high-frequency structural edge gradients at the fracture boundary.
 
 ### 4. Paraboloid Volume Integration
 Approximating the physical cavity depression as an elliptic paraboloid:
 
-$$V_{\text{cu\_cm}} = \frac{1}{2} \cdot A_{\text{sq\_cm}} \cdot D_{\text{cm}} \implies V_{\text{cu\_meter}} = V_{\text{cu\_cm}} \times 10^{-6}$$
+$$
+V_{\text{cm}^3} = \frac{1}{2} \cdot A_{\text{cm}^2} \cdot D_{\text{cm}} \implies V_{\text{m}^3} = V_{\text{cm}^3} \times 10^{-6}
+$$
 
 ### 5. Municipal Asphalt & Labor Repair Cost
 The total predicted expenditure accounts for material compaction and mobilization:
 
-$$\text{Cost} = \left( V_{\text{cu\_meter}} \cdot (1 + \kappa) \cdot R_{\text{mat}} \right) + \left( A_{\text{sq\_meter}} \cdot R_{\text{labor}} \right) + R_{\text{base}} + R_{\text{overhead}}$$
+$$
+\text{Cost} = \left( V_{\text{m}^3} \cdot (1 + \kappa) \cdot R_{\text{mat}} \right) + \left( A_{\text{m}^2} \cdot R_{\text{labor}} \right) + R_{\text{base}} + R_{\text{overhead}}
+$$
 
 - $\kappa = 0.15$ (Standard 15% compaction loss factor)
+- $A_{\text{m}^2} = A_{\text{cm}^2} \times 10^{-4}$ (Cavity area in square meters)
 - Default municipal unit rates: $R_{\text{mat}} = \$220/\text{m}^3$, $R_{\text{labor}} = \$45/\text{m}^2$, $R_{\text{base}} = \$75.00$, $R_{\text{overhead}} = \$85.00$.
 
 ---
