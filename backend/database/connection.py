@@ -8,6 +8,9 @@ context management, transaction commits/rollbacks, and dictionary cursor parsing
 
 import os
 import sys
+import time
+import queue
+import threading
 import logging
 from contextlib import contextmanager
 from pathlib import Path
@@ -247,10 +250,87 @@ def get_connection_string(database: str = None) -> str:
     return ";".join(params) + ";"
 
 
-def create_connection(database: str = None, autocommit: bool = False):
+class DBConnectionPool:
     """
-    Creates and returns a database connection using either pymssql or pyodbc.
-    Automatically selects the best driver and translates parameters.
+    Thread-safe connection pool for Microsoft SQL Server connections.
+    Enables sub-100ms query reuse across HTTP requests and avoids
+    expensive repeated transcontinental TCP/TDS handshakes over tunnel bridges.
+    """
+    def __init__(self, maxsize: int = 8):
+        self._pool = queue.Queue(maxsize=maxsize)
+        self._lock = threading.Lock()
+
+    def get_connection(self, database: str = None, autocommit: bool = False):
+        """
+        Retrieves an active pooled connection or creates a new one.
+        Validates connection liveness with a fast probe before returning.
+        """
+        while not self._pool.empty():
+            try:
+                conn = self._pool.get_nowait()
+                if self._is_alive(conn):
+                    return conn
+                else:
+                    self._safely_close(conn)
+            except (queue.Empty, Exception):
+                break
+
+        return self._create_with_retry(database, autocommit)
+
+    def release_connection(self, conn, healthy: bool = True):
+        """
+        Returns a healthy connection to the pool or closes it if unhealthy or pool is full.
+        """
+        if not conn:
+            return
+        if not healthy:
+            self._safely_close(conn)
+            return
+        try:
+            self._pool.put_nowait(conn)
+        except queue.Full:
+            self._safely_close(conn)
+
+    def _is_alive(self, conn) -> bool:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+            return True
+        except Exception:
+            return False
+
+    def _safely_close(self, conn):
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    def _create_with_retry(self, database: str = None, autocommit: bool = False, max_attempts: int = 2):
+        last_exc = None
+        for attempt in range(max_attempts):
+            try:
+                return _raw_create_connection(database=database, autocommit=autocommit)
+            except Exception as exc:
+                last_exc = exc
+                logger.warning(
+                    "Database connection attempt %d/%d failed: %s%s",
+                    attempt + 1, max_attempts, exc,
+                    " - Retrying in 0.5s..." if attempt + 1 < max_attempts else ""
+                )
+                if attempt + 1 < max_attempts:
+                    time.sleep(0.5)
+        raise last_exc
+
+
+_global_pool = DBConnectionPool(maxsize=8)
+
+
+def _raw_create_connection(database: str = None, autocommit: bool = False):
+    """
+    Internal factory that establishes a new physical database connection.
+    Supports pymssql (FreeTDS) and pyodbc with automatic platform detection.
     """
     creds = get_db_credentials(database=database)
     use_pymssql = should_use_pymssql(creds)
@@ -258,31 +338,30 @@ def create_connection(database: str = None, autocommit: bool = False):
     is_render = "RENDER" in os.environ or sys.platform != "win32"
     server_is_local = creds["server"].lower().startswith("localhost") or creds["server"] == "127.0.0.1"
 
-    # On cloud / Render: if DB_SERVER has not been pointed to an external host/tunnel,
-    # avoid hanging on UDP 1434 broadcast lookup to non-existent localhost SQLEXPRESS.
     if is_render and server_is_local and not os.getenv("DB_SERVER"):
         raise ConnectionError(
             "SQL Server is not running on Render container localhost. "
-            "Configure DB_SERVER and DB_PORT with your ngrok tunnel in Render Environment."
+            "Configure DB_SERVER and DB_PORT with your tunnel in Render Environment."
         )
 
     if use_pymssql:
         if not PYMSSQL_AVAILABLE:
             raise RuntimeError("pymssql is required but not installed in the current environment.")
         try:
-            # Clean server name for FreeTDS / pymssql (strip instance name if port/tunnel is used)
             connect_server = creds["server"]
             if "\\" in connect_server and (creds["port"] or is_render):
                 connect_server = connect_server.split("\\", 1)[0]
 
+            # Tunnel / cloud connections need at least 12s timeout to accommodate initial transcontinental TCP handshake
+            default_timeout = "12" if (is_render or creds.get("port")) else "5"
             connect_kwargs = {
                 "server": connect_server,
                 "database": creds["database"],
                 "user": creds["user"],
                 "password": creds["password"],
                 "autocommit": autocommit,
-                "timeout": int(os.getenv("DB_TIMEOUT", "4")),
-                "login_timeout": int(os.getenv("DB_LOGIN_TIMEOUT", "4"))
+                "timeout": int(os.getenv("DB_TIMEOUT", default_timeout)),
+                "login_timeout": int(os.getenv("DB_LOGIN_TIMEOUT", default_timeout))
             }
             if creds["port"]:
                 connect_kwargs["port"] = creds["port"]
@@ -292,14 +371,19 @@ def create_connection(database: str = None, autocommit: bool = False):
         except Exception as err:
             logger.error("pymssql connection failed to [%s:%s] DB [%s]: %s",
                          creds["server"], creds["port"], creds["database"], err)
-            # If on Windows and pyodbc is available as a fallback, attempt pyodbc
             if sys.platform == "win32" and PYODBC_AVAILABLE and creds["trusted_connection"]:
                 logger.info("Attempting fallback to pyodbc on Windows...")
                 return _create_pyodbc_connection(database, autocommit)
             raise
 
-    # Otherwise use pyodbc
     return _create_pyodbc_connection(database, autocommit)
+
+
+def create_connection(database: str = None, autocommit: bool = False):
+    """
+    Creates and returns a database connection (pooled for optimal performance).
+    """
+    return _global_pool.get_connection(database=database, autocommit=autocommit)
 
 
 def _create_pyodbc_connection(database: str = None, autocommit: bool = False):
@@ -324,14 +408,18 @@ def _create_pyodbc_connection(database: str = None, autocommit: bool = False):
 def get_db_connection(database: str = None):
     """
     Context manager for database operations.
-    Automatically commits transactions on success, rolls back on error, and closes the connection.
+    Leverages thread-safe connection pooling for sub-100ms query reuse.
+    Automatically commits transactions on success, rolls back on error,
+    and returns healthy connections to the pool.
     """
     conn = None
+    healthy = True
     try:
-        conn = create_connection(database=database, autocommit=False)
+        conn = _global_pool.get_connection(database=database, autocommit=False)
         yield conn
         conn.commit()
     except Exception as exc:
+        healthy = False
         if conn:
             try:
                 conn.rollback()
@@ -341,10 +429,7 @@ def get_db_connection(database: str = None):
         raise
     finally:
         if conn:
-            try:
-                conn.close()
-            except Exception as close_exc:
-                logger.warning("Error closing connection: %s", close_exc)
+            _global_pool.release_connection(conn, healthy=healthy)
 
 
 def row_to_dict(cursor, row) -> dict:

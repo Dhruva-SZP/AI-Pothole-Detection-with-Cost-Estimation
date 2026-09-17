@@ -31,13 +31,19 @@ echo.
 echo [2/3] Verifying TCP Port 1433 is listening...
 powershell -Command "$m = netstat -ano | findstr :1433; if ($m) { Write-Host '[OK] Port 1433 is active and LISTENING!' -ForegroundColor Green } else { Write-Host '[!] Port 1433 is not listening yet. Check SQL Server Configuration Manager.' -ForegroundColor Yellow }"
 
-echo [3/3] Launching Public Tunnel (bore)...
+echo [3/3] Launching Public Tunnel (bore) on Fixed Port 41982...
 echo ======================================================================
-echo   Starting tunnel to bore.pub on Port 1433...
+echo   ENDPOINT: bore.pub:41982 <---> localhost:1433 (PotholeDetectionDB)
 echo   (Zero setup required - No credit card, no account)
 echo ======================================================================
 echo.
 
-"%~dp0bore.exe" local 1433 --to bore.pub
+:tunnel_loop
+echo [%time%] Starting tunnel to bore.pub:41982...
+"%~dp0bore.exe" local 1433 --to bore.pub --port 41982
 
-pause
+echo.
+echo [!] Tunnel disconnected or network interrupted.
+echo [*] Automatically reconnecting in 3 seconds (Press Ctrl+C to stop)...
+timeout /t 3 /nobreak >nul
+goto tunnel_loop
