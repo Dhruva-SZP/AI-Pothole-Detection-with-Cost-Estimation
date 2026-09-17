@@ -9,7 +9,6 @@
   <a href="https://www.microsoft.com/sql-server"><img src="https://img.shields.io/badge/Microsoft_SQL_Server-2019_Express-CC292B?style=for-the-badge&logo=microsoftsqlserver&logoColor=white" alt="SQL Server" /></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" /></a>
   <a href="https://leafletjs.com/"><img src="https://img.shields.io/badge/GIS-Leaflet_Maps-199900?style=for-the-badge&logo=leaflet&logoColor=white" alt="Leaflet" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License" /></a>
 </p>
 
 <p align="center">
@@ -18,7 +17,7 @@
 
 <p align="center">
   <a href="#-live-production-application"><strong>Explore Live Demo »</strong></a> •
-  <a href="#-demonstration-video"><strong>Watch Video</strong></a> •
+  <a href="https://drive.google.com/file/d/1FNu5pYX7o3cirxw5r8VawtdUn30REWSC/view?usp=drive_link" target="_blank" rel="noopener noreferrer"><strong>Watch Video Demo 🎬</strong></a> •
   <a href="#-photogrammetric--mathematical-modeling"><strong>Mathematical Modeling</strong></a> •
   <a href="#-system-architecture"><strong>Architecture</strong></a> •
   <a href="#-rest-api-reference"><strong>REST API</strong></a> •
@@ -50,11 +49,13 @@
 > **Interactive Walkthrough**: Experience autonomous road surface scanning, real-time bounding box localization, depth inference, and live SQL Server synchronization in action.
 
 <p align="center">
-  <a href="https://ai-pothole-detection-with-cost-estimation.onrender.com/">
-    <img src="docs/screenshots/detection_results.png" alt="Watch PotholeAI Live Demo" width="95%" />
+  <a href="https://drive.google.com/file/d/1FNu5pYX7o3cirxw5r8VawtdUn30REWSC/view?usp=drive_link" target="_blank" rel="noopener noreferrer">
+    <img src="docs/screenshots/video_demo_cover.png" alt="Watch PotholeAI Video Demonstration" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />
   </a>
-  <br />
-  <em>Click above to launch the live interactive web platform or embed your walkthrough video (.mp4 / GIF) directly.</em>
+  <br /><br />
+  <a href="https://drive.google.com/file/d/1FNu5pYX7o3cirxw5r8VawtdUn30REWSC/view?usp=drive_link" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/▶_Watch_Full_Demonstration_Video-Google_Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white" alt="Watch Full Demonstration Video" />
+  </a>
 </p>
 
 ---
@@ -90,7 +91,7 @@ The system is deployed and fully operational in production on Render cloud infra
 - [🌉 Connecting Local SQL Server to Cloud (Render Bridge)](#-connecting-local-sql-server-to-cloud-render-bridge)
 - [🧪 Automated Verification Suite](#-automated-verification-suite)
 - [🗺️ Roadmap & Future Scope](#-roadmap--future-scope)
-- [👤 Author & License](#-author--license)
+- [👤 Author & Acknowledgments](#-author--acknowledgments)
 
 ---
 
@@ -553,8 +554,3 @@ python test_e2e_production.py
 - **Lead Developer**: **Dhruva** ([@Dhruva-SZP](https://github.com/Dhruva-SZP))
 - **Special Thanks**: Ultralytics YOLOv8 team, OpenStreetMap contributors, and CartoDB.
 
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
